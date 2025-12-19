@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>neko | cataas api</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background-color: #f8f9fa; padding-top: 100px;}
+    .cat-card img {
+      width: 100%;
+      height: 220px;
+      object-fit: contain;
+      background-color: #fff;
+      border-radius: 10px;
+      padding: 6px;
+    }
+    .cat-card-large img {
+      width: 100%;
+      height: 420px;
+      object-fit: contain;
+      background-color: #fff;
+      border-radius: 10px;
+      padding: 10px;
+    }
+    .pagination .page-link { cursor: pointer; }
+    .disabled .page-link { pointer-events: none; opacity: 0.6; }
+    .header {
+      position: fixed;
+      top: 0;
+      z-index: 1020;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container-fluid mb-5 header" style="background-color: rgb(248, 138, 211);">
+    <div class="row p-3 align-items-center">
+      <div class="col"><div class="h4 text-light">neko</div></div>
+      <div class="col text-end">
+        <form id="searchForm" class="d-flex justify-content-end">
+          <div class="input-group">
+            <input id="searchInput" class="form-control" type="search" placeholder="Search by tag (e.g. cute, funny)" aria-label="Search">
+            <button class="btn btn-light" type="submit">Search</button>
+            <button class="btn btn-outline-danger" type="button" id="clearBtn">✕</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="row" id="contentArea"></div>
+    <div class="row">
+      <div class="col text-center my-2">
+        <div id="statusText" class="text-muted"></div>
+        <button id="nextCatBtn" class="btn btn-primary mt-2" style="display:none;">Show another cat</button>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col">
+        <nav aria-label="Page navigation" id="pagerNav">
+          <ul class="pagination justify-content-center">
+            <li class="page-item" id="prevItem"><a class="page-link" onclick="prevPage()">&laquo; Prev</a></li>
+            <li class="page-item disabled"><span class="page-link" id="pageText">Page 1</span></li>
+            <li class="page-item" id="nextItem"><a class="page-link" onclick="nextPage()">Next &raquo;</a></li>
+          </ul>
+        </nav>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const contents    = document.getElementById("contentArea");
+    const searchForm  = document.getElementById("searchForm");
+    const searchInput = document.getElementById("searchInput");
+    const clearBtn    = document.getElementById("clearBtn");
+    const pageText    = document.getElementById("pageText");
+    const statusText  = document.getElementById("statusText");
+    const prevItem    = document.getElementById("prevItem");
+    const nextItem    = document.getElementById("nextItem");
+    const pagerNav    = document.getElementById("pagerNav");
+    const nextCatBtn  = document.getElementById("nextCatBtn");
+
+    let currentPage = 1;
+    const pageSize  = 9;
+    let currentTag  = "";
+
+    function updatePager() {
+      pageText.textContent = "Page " + currentPage;
+      prevItem.classList.toggle("disabled", currentPage <= 1);
+      nextItem.classList.remove("disabled");
+    }
+
+    function buildCatUrl(tag) {
+      const base = tag
+        ? `https://cataas.com/cat/${encodeURIComponent(tag)}?type=square`
+        : `https://cataas.com/cat?type=square`;
+      return `${base}&random=${Math.random()}`;
+    }
+
+    function renderListPage() {
+      contents.innerHTML = "";
+      statusText.textContent = "";
+      for (let i = 0; i < pageSize; i++) {
+        const url = buildCatUrl("");
+        contents.innerHTML += `
+          <div class="col-12 col-md-6 col-lg-4">
+            <div class="card my-3 shadow cat-card text-center">
+              <img src="${url}" alt="Cat Image" onerror="this.src='https://cataas.com/cat?type=square&random=' + Math.random()">
+            </div>
+          </div>
+        `;
+      }
+      pagerNav.style.display = "block";
+      nextCatBtn.style.display = "none";
+      updatePager();
+    }
+
+    function renderSingleCat() {
+      contents.innerHTML = "";
+      const url = buildCatUrl(currentTag);
+      contents.innerHTML = `
+        <div class="col-12">
+          <div class="card my-3 shadow cat-card-large text-center">
+            <img src="${url}" alt="Cat Image" onerror="this.src='https://cataas.com/cat?type=square&random=' + Math.random()">
+          </div>
+        </div>
+      `;
+      statusText.textContent = currentTag ? `Showing tag: "${currentTag}"` : "Random cat";
+      pagerNav.style.display = "none";
+      nextCatBtn.style.display = "inline-block";
+    }
+
+    function nextPage() { currentPage++; renderListPage(); }
+    function prevPage() { if (currentPage > 1) { currentPage--; renderListPage(); } }
+
+    function resetToRandom() {
+      searchInput.value = "";
+      currentTag = "";
+      currentPage = 1;
+      statusText.textContent = "";
+      renderListPage();
+    }
+
+    searchForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const value = searchInput.value.trim().toLowerCase();
+      currentTag = value;
+      currentPage = 1;
+      renderSingleCat();
+    });
+
+    clearBtn.addEventListener("click", resetToRandom);
+    nextCatBtn.addEventListener("click", renderSingleCat);
+
+    window.nextPage = nextPage;
+    window.prevPage = prevPage;
+    window.resetToRandom = resetToRandom;
+
+    renderListPage();
+  </script>
+</body>
+</html>

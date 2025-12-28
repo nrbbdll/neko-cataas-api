@@ -7,7 +7,11 @@
   <title>neko | cataas api</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
-    body { background-color: #f8f9fa; padding-top: 100px;}
+    body {
+      background-color: #f8f9fa;
+      padding-top: 100px;
+    }
+
     .cat-card img {
       width: 100%;
       height: 220px;
@@ -16,6 +20,7 @@
       border-radius: 10px;
       padding: 6px;
     }
+
     .cat-card-large img {
       width: 100%;
       height: 420px;
@@ -24,8 +29,16 @@
       border-radius: 10px;
       padding: 10px;
     }
-    .pagination .page-link { cursor: pointer; }
-    .disabled .page-link { pointer-events: none; opacity: 0.6; }
+
+    .pagination .page-link {
+      cursor: pointer;
+    }
+
+    .disabled .page-link {
+      pointer-events: none;
+      opacity: 0.6;
+    }
+
     .header {
       position: fixed;
       top: 0;
@@ -37,11 +50,14 @@
 <body>
   <div class="container-fluid mb-5 header" style="background-color: rgb(248, 138, 211);">
     <div class="row p-3 align-items-center">
-      <div class="col"><div class="h4 text-light">neko</div></div>
+      <div class="col">
+        <div class="h4 text-light">neko</div>
+      </div>
       <div class="col text-end">
         <form id="searchForm" class="d-flex justify-content-end">
           <div class="input-group">
-            <input id="searchInput" class="form-control" type="search" placeholder="Search by tag (e.g. cute, funny)" aria-label="Search">
+            <input id="searchInput" class="form-control" type="search" placeholder="Search by tag (e.g. cute, funny)"
+              aria-label="Search">
             <button class="btn btn-light" type="submit">Search</button>
             <button class="btn btn-outline-danger" type="button" id="clearBtn">✕</button>
           </div>
@@ -72,20 +88,20 @@
   </div>
 
   <script>
-    const contents    = document.getElementById("contentArea");
-    const searchForm  = document.getElementById("searchForm");
+    const contents = document.getElementById("contentArea");
+    const searchForm = document.getElementById("searchForm");
     const searchInput = document.getElementById("searchInput");
-    const clearBtn    = document.getElementById("clearBtn");
-    const pageText    = document.getElementById("pageText");
-    const statusText  = document.getElementById("statusText");
-    const prevItem    = document.getElementById("prevItem");
-    const nextItem    = document.getElementById("nextItem");
-    const pagerNav    = document.getElementById("pagerNav");
-    const nextCatBtn  = document.getElementById("nextCatBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const pageText = document.getElementById("pageText");
+    const statusText = document.getElementById("statusText");
+    const prevItem = document.getElementById("prevItem");
+    const nextItem = document.getElementById("nextItem");
+    const pagerNav = document.getElementById("pagerNav");
+    const nextCatBtn = document.getElementById("nextCatBtn");
 
     let currentPage = 1;
-    const pageSize  = 9;
-    let currentTag  = "";
+    const pageSize = 9;
+    let currentTag = "";
 
     function updatePager() {
       pageText.textContent = "Page " + currentPage;
@@ -100,34 +116,80 @@
       return `${base}&random=${Math.random()}`;
     }
 
-    function renderListPage() {
+    async function renderListPage() {
       contents.innerHTML = "";
       statusText.textContent = "";
-      for (let i = 0; i < pageSize; i++) {
-        const url = buildCatUrl("");
-        contents.innerHTML += `
-          <div class="col-12 col-md-6 col-lg-4">
-            <div class="card my-3 shadow cat-card text-center">
-              <img src="${url}" alt="Cat Image" onerror="this.src='https://cataas.com/cat?type=square&random=' + Math.random()">
+      try {
+        const skip = (currentPage - 1) * pageSize;
+        const apiUrl = `https://cataas.com/api/cats?limit=${pageSize}&skip=${skip}`;
+        const response = await fetch(apiUrl);
+        const cats = await response.json();
+        cats.forEach(cat => {
+          const url = `https://cataas.com/cat/${cat._id}?type=square`;
+          const tags = cat.tags.join(', ') || 'No tags';
+          contents.innerHTML += `
+            <div class="col-12 col-md-6 col-lg-4">
+              <div class="card my-3 shadow cat-card text-center">
+                <img src="${url}" alt="Cat Image" onerror="this.src='https://cataas.com/cat?type=square&random=' + Math.random()">
+                <div class="card-body">
+                  <p class="card-text">Tags: ${tags}</p>
+                </div>
+              </div>
             </div>
-          </div>
-        `;
+          `;
+        });
+      } catch (error) {
+        console.error('Error fetching cats:', error);
+        statusText.textContent = "Error loading cats.";
       }
       pagerNav.style.display = "block";
       nextCatBtn.style.display = "none";
       updatePager();
     }
 
-    function renderSingleCat() {
+    async function renderSingleCat() {
       contents.innerHTML = "";
-      const url = buildCatUrl(currentTag);
-      contents.innerHTML = `
-        <div class="col-12">
-          <div class="card my-3 shadow cat-card-large text-center">
-            <img src="${url}" alt="Cat Image" onerror="this.src='https://cataas.com/cat?type=square&random=' + Math.random()">
+      try {
+        const apiUrl = currentTag ? `https://cataas.com/api/cats?limit=1&tags=${encodeURIComponent(currentTag)}` : `https://cataas.com/api/cats?limit=1`;
+        const response = await fetch(apiUrl);
+        const cats = await response.json();
+        if (cats.length > 0) {
+          const cat = cats[0];
+          const url = `https://cataas.com/cat/${cat._id}?type=square`;
+          const tags = cat.tags.join(', ') || 'No tags';
+          contents.innerHTML = `
+            <div class="col-12">
+              <div class="card my-3 shadow cat-card-large text-center">
+                <img src="${url}" alt="Cat Image" onerror="this.src='https://cataas.com/cat?type=square&random=' + Math.random()">
+                <div class="card-body">
+                  <p class="card-text">Tags: ${tags}</p>
+                </div>
+              </div>
+            </div>
+          `;
+        } else {
+          contents.innerHTML = `
+            <div class="col-12">
+              <div class="card my-3 shadow cat-card-large text-center">
+                <div class="card-body">
+                  <p class="card-text">No cats found for tag "${currentTag}".</p>
+                </div>
+              </div>
+            </div>
+          `;
+        }
+      } catch (error) {
+        console.error('Error fetching cat:', error);
+        contents.innerHTML = `
+          <div class="col-12">
+            <div class="card my-3 shadow cat-card-large text-center">
+              <div class="card-body">
+                <p class="card-text">Error loading cat.</p>
+              </div>
+            </div>
           </div>
-        </div>
-      `;
+        `;
+      }
       statusText.textContent = currentTag ? `Showing tag: "${currentTag}"` : "Random cat";
       pagerNav.style.display = "none";
       nextCatBtn.style.display = "inline-block";
@@ -162,4 +224,5 @@
     renderListPage();
   </script>
 </body>
+
 </html>

@@ -1,228 +1,30 @@
 <!doctype html>
 <html lang="en">
-
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>neko | cataas api</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
-  <style>
-    body {
-      background-color: #f8f9fa;
-      padding-top: 100px;
-    }
-
-    .cat-card img {
-      width: 100%;
-      height: 220px;
-      object-fit: contain;
-      background-color: #fff;
-      border-radius: 10px;
-      padding: 6px;
-    }
-
-    .cat-card-large img {
-      width: 100%;
-      height: 420px;
-      object-fit: contain;
-      background-color: #fff;
-      border-radius: 10px;
-      padding: 10px;
-    }
-
-    .pagination .page-link {
-      cursor: pointer;
-    }
-
-    .disabled .page-link {
-      pointer-events: none;
-      opacity: 0.6;
-    }
-
-    .header {
-      position: fixed;
-      top: 0;
-      z-index: 1020;
-    }
-  </style>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Neko | A little corner for cat people</title>
+  <meta name="description" content="Discover cats, explore tags, and keep a little collection of favorites. Powered by CATAAS.">
+  <link rel="icon" href="assets/neko-logo.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://cataas.com" crossorigin>
+  <link href="assets/bootstrap.min.css" rel="stylesheet">
+  <link href="styles.css" rel="stylesheet"><script src="app.js" defer></script>
 </head>
-
 <body>
-  <div class="container-fluid mb-5 header" style="background-color: rgb(248, 138, 211);">
-    <div class="row p-3 align-items-center">
-      <div class="col">
-        <div class="h4 text-light">neko</div>
-      </div>
-      <div class="col text-end">
-        <form id="searchForm" class="d-flex justify-content-end">
-          <div class="input-group">
-            <input id="searchInput" class="form-control" type="search" placeholder="Search by tag (e.g. cute, funny)"
-              aria-label="Search">
-            <button class="btn btn-light" type="submit">Search</button>
-            <button class="btn btn-outline-danger" type="button" id="clearBtn">✕</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
-
-  <div class="container">
-    <div class="row" id="contentArea"></div>
-    <div class="row">
-      <div class="col text-center my-2">
-        <div id="statusText" class="text-muted"></div>
-        <button id="nextCatBtn" class="btn btn-primary mt-2" style="display:none;">Show another cat</button>
-      </div>
-    </div>
-    <div class="row">
-      <div class="col">
-        <nav aria-label="Page navigation" id="pagerNav">
-          <ul class="pagination justify-content-center">
-            <li class="page-item" id="prevItem"><a class="page-link" onclick="prevPage()">&laquo; Prev</a></li>
-            <li class="page-item disabled"><span class="page-link" id="pageText">Page 1</span></li>
-            <li class="page-item" id="nextItem"><a class="page-link" onclick="nextPage()">Next &raquo;</a></li>
-          </ul>
-        </nav>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    const contents = document.getElementById("contentArea");
-    const searchForm = document.getElementById("searchForm");
-    const searchInput = document.getElementById("searchInput");
-    const clearBtn = document.getElementById("clearBtn");
-    const pageText = document.getElementById("pageText");
-    const statusText = document.getElementById("statusText");
-    const prevItem = document.getElementById("prevItem");
-    const nextItem = document.getElementById("nextItem");
-    const pagerNav = document.getElementById("pagerNav");
-    const nextCatBtn = document.getElementById("nextCatBtn");
-
-    let currentPage = 1;
-    const pageSize = 9;
-    let currentTag = "";
-
-    function updatePager() {
-      pageText.textContent = "Page " + currentPage;
-      prevItem.classList.toggle("disabled", currentPage <= 1);
-      nextItem.classList.remove("disabled");
-    }
-
-    function buildCatUrl(tag) {
-      const base = tag
-        ? `https://cataas.com/cat/${encodeURIComponent(tag)}?type=square`
-        : `https://cataas.com/cat?type=square`;
-      return `${base}&random=${Math.random()}`;
-    }
-
-    async function renderListPage() {
-      contents.innerHTML = "";
-      statusText.textContent = "";
-      try {
-        const skip = (currentPage - 1) * pageSize;
-        const apiUrl = `https://cataas.com/api/cats?limit=${pageSize}&skip=${skip}`;
-        const response = await fetch(apiUrl);
-        const cats = await response.json();
-        cats.forEach(cat => {
-          const url = `https://cataas.com/cat/${cat._id}?type=square`;
-          const tags = cat.tags.join(', ') || 'No tags';
-          contents.innerHTML += `
-            <div class="col-12 col-md-6 col-lg-4">
-              <div class="card my-3 shadow cat-card text-center">
-                <img src="${url}" alt="Cat Image" onerror="this.src='https://cataas.com/cat?type=square&random=' + Math.random()">
-                <div class="card-body">
-                  <p class="card-text">Tags: ${tags}</p>
-                </div>
-              </div>
-            </div>
-          `;
-        });
-      } catch (error) {
-        console.error('Error fetching cats:', error);
-        statusText.textContent = "Error loading cats.";
-      }
-      pagerNav.style.display = "block";
-      nextCatBtn.style.display = "none";
-      updatePager();
-    }
-
-    async function renderSingleCat() {
-      contents.innerHTML = "";
-      try {
-        const apiUrl = currentTag ? `https://cataas.com/api/cats?limit=1&tags=${encodeURIComponent(currentTag)}` : `https://cataas.com/api/cats?limit=1`;
-        const response = await fetch(apiUrl);
-        const cats = await response.json();
-        if (cats.length > 0) {
-          const cat = cats[0];
-          const url = `https://cataas.com/cat/${cat._id}?type=square`;
-          const tags = cat.tags.join(', ') || 'No tags';
-          contents.innerHTML = `
-            <div class="col-12">
-              <div class="card my-3 shadow cat-card-large text-center">
-                <img src="${url}" alt="Cat Image" onerror="this.src='https://cataas.com/cat?type=square&random=' + Math.random()">
-                <div class="card-body">
-                  <p class="card-text">Tags: ${tags}</p>
-                </div>
-              </div>
-            </div>
-          `;
-        } else {
-          contents.innerHTML = `
-            <div class="col-12">
-              <div class="card my-3 shadow cat-card-large text-center">
-                <div class="card-body">
-                  <p class="card-text">No cats found for tag "${currentTag}".</p>
-                </div>
-              </div>
-            </div>
-          `;
-        }
-      } catch (error) {
-        console.error('Error fetching cat:', error);
-        contents.innerHTML = `
-          <div class="col-12">
-            <div class="card my-3 shadow cat-card-large text-center">
-              <div class="card-body">
-                <p class="card-text">Error loading cat.</p>
-              </div>
-            </div>
-          </div>
-        `;
-      }
-      statusText.textContent = currentTag ? `Showing tag: "${currentTag}"` : "Random cat";
-      pagerNav.style.display = "none";
-      nextCatBtn.style.display = "inline-block";
-    }
-
-    function nextPage() { currentPage++; renderListPage(); }
-    function prevPage() { if (currentPage > 1) { currentPage--; renderListPage(); } }
-
-    function resetToRandom() {
-      searchInput.value = "";
-      currentTag = "";
-      currentPage = 1;
-      statusText.textContent = "";
-      renderListPage();
-    }
-
-    searchForm.addEventListener("submit", (e) => {
-      e.preventDefault();
-      const value = searchInput.value.trim().toLowerCase();
-      currentTag = value;
-      currentPage = 1;
-      renderSingleCat();
-    });
-
-    clearBtn.addEventListener("click", resetToRandom);
-    nextCatBtn.addEventListener("click", renderSingleCat);
-
-    window.nextPage = nextPage;
-    window.prevPage = prevPage;
-    window.resetToRandom = resetToRandom;
-
-    renderListPage();
-  </script>
-</body>
-
-</html>
+<a class="skip-link" href="#main">Skip to gallery</a>
+<header class="site-header container"><a class="wordmark" href="./" aria-label="Neko home"><img src="assets/neko-logo.svg" alt="" width="40" height="40" decoding="async">neko</a><a href="https://nrbbdll.github.io/">&lt;back to portfolio/&gt;</a></header>
+<main class="container" id="main">
+<section class="intro"><p class="eyebrow">A small project by Nei Bobadilla</p><h1>A little corner of the<br>internet for <em>cat people.</em></h1><p>Discover cats, explore their tags, and save the ones that make you smile.</p></section>
+<nav class="view-nav" aria-label="Gallery views"><button data-view="all" aria-pressed="true">All Cats</button><button data-view="tags" aria-pressed="false">Browse Tags</button><button data-view="favorites" aria-pressed="false">Favorites <span id="favoriteCount">0</span></button><button id="nextCatBtn" class="accent">Show Me A Cat ↗</button></nav>
+<form id="searchForm" class="search-bar"><label for="searchInput">Find a tag</label><input id="searchInput" type="search" placeholder="e.g. cute" maxlength="120"><button type="submit">Search</button><button type="button" id="clearBtn">Clear filter</button></form>
+<section id="tagsPanel" hidden aria-label="Browse available tags"><label for="tagSearch">Filter available tags</label><input id="tagSearch" type="search" placeholder="Find an available tag"><p id="tagStatus" role="status"></p><div id="tagList" class="chips"></div><button id="moreTags" hidden>Show more tags</button><button id="retryTags" hidden>Retry tags</button></section>
+<div class="gallery-heading"><h2 id="collectionTitle" tabindex="-1">All cats</h2><span id="imageCount"></span></div>
+<p id="statusText" role="status" aria-live="polite"></p><button id="retryRequest" hidden>Retry request</button>
+<div id="contentArea" class="row g-4" aria-label="Cat gallery" aria-busy="false"></div>
+<nav id="pagerNav" class="pager" aria-label="Gallery pages"><button id="prevPage">← Previous</button><span id="pageText">Page 1</span><button id="nextPage">Next →</button></nav>
+<details class="how-to"><summary>Make yourself at home — how to use Neko</summary><p>Browse the gallery or try Show Me A Cat. Search by tag or explore Browse Tags. Select a picture to open the viewer, use ♥ to save it, or download the original. Favorites stay in this browser; they do not sync between devices.</p></details>
+</main>
+<footer class="container">Cat pictures provided by <a href="https://cataas.com/" target="_blank" rel="noopener noreferrer">CATAAS ↗</a>. Availability depends on their service.<span>Made by Nei · Neko</span></footer>
+<dialog id="viewer" aria-labelledby="viewerTitle"><div class="viewer-head"><h2 id="viewerTitle">A closer look</h2><button id="closeViewer" autofocus>Back to gallery ✕</button></div><div id="viewerMedia"></div><p id="viewerTags"></p><div class="viewer-controls"><button id="viewerPrev">← Previous</button><button id="viewerFavorite">Save favorite</button><button id="viewerDownload">Download</button><button id="viewerNext">Next →</button></div></dialog>
+<div id="notice" role="status" aria-live="polite"></div><div id="downloadFallback" hidden><span>Download unavailable. </span><a id="originalLink" target="_blank" rel="noopener noreferrer">Open original to save through your browser ↗</a><button id="dismissFallback" aria-label="Dismiss download message">✕</button></div>
+<noscript><p class="container">Please enable JavaScript to browse cats and save favorites.</p></noscript>
+</body></html>
